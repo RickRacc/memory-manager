@@ -34,5 +34,34 @@ int check_heap() {
             }
         }
     */
+
+   memory_block_t *cur = free_head;
+   memory_block_t *next = get_next(cur);
+
+   //alignment
+   if ((get_size(free_head) % 16) != 0) {
+    return -1;
+   }
+
+   //expected order
+   while (next != NULL) {
+    if (cur >= next) {
+        return -1;
+    }
+    
+    //check overlap
+    char *endCur = (char *)cur + get_size(cur);
+    char *startNext = (char *)next;
+    if (endCur >  startNext) {
+        return -1;
+    }
+
+
+
+    
+
+
+
+   }
     return 0;
 }

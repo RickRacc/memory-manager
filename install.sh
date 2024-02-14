@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 -m pip install tabulate --user
+python3 -m pip install tabulate --usermak
