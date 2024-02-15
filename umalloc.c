@@ -97,15 +97,24 @@ memory_block_t *get_block(void *payload) {
 memory_block_t *find(size_t size) {
     //* STUDENT TODO
     memory_block_t *cur = free_head;
+    memory_block_t *bestBlock = cur;
     bool found = false;
-    while (!found) {
-        if (get_size(cur) >= size) {
-            found = true;
+    while (cur != NULL) {
+        if (get_size(cur) == size) {
             return cur;
+        }
+        else if (get_size(cur) > size) {
+            found = true;
+            if ((size - get_size(cur)) <= (size - get_size(bestBlock))) {
+                bestBlock = cur;
+            }
         }
         else {
             cur = get_next(cur);
         }
+    }
+    if (found) {
+        return bestBlock;
     }
     return NULL;
 }
@@ -115,9 +124,11 @@ memory_block_t *find(size_t size) {
  */
 memory_block_t *extend(size_t size) {
     //* STUDENT TODO
-
-    // ??? THIS HOW TO DO IT???
-    return csbrk(size);
+    
+    // SHOULD I DO +!^ HERE>>>MAKEW SURE YOU CAN!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    memory_block_t *rand = (memory_block_t *)csbrk(size + 16);
+    put_block(rand, size, false);
+    return rand;
 }
 
 /*
@@ -125,9 +136,21 @@ memory_block_t *extend(size_t size) {
  */
 memory_block_t *split(memory_block_t *block, size_t size) {
     //* STUDENT TODO
-    unsigned long blockSize = get_size;
-    unsigned long unallocatedSize = blockSize - size - 16;
-    
+    unsigned long mod = size % ALIGNMENT;
+    size += mod;
+
+    //size = ALIGN(size);
+
+    //keeping left portion of free block free    // B = H + s  + H + S
+                                                // s = B - H - H - S
+                                                // s = get_size - H - S
+    unsigned long freeBlockSize = get_size(block) - size - ALIGNMENT; 
+    block->block_metadata = freeBlockSize | false;
+
+    char *allocatedAddress = (char *)(block + 1) + get_size(block);
+    memory_block_t *allocatedBlock = (memory_block_t *)allocatedAddress;
+    put_block(allocatedBlock, size, true);
+    return allocatedBlock;
 }
 
 /*
@@ -138,57 +161,58 @@ memory_block_t *coalesce(memory_block_t *block) {
 
 
     // DID THIS AS FIRST STEP
-    block = firstFreeBlock(block);
+    // block = firstFreeBlock(block);
     
 
-    uint64_t newSize = get_size(block);
-    memory_block_t *next = get_next(block);
-    while (!is_allocated(next)) {
-        newSize += (16 + get_size(next));
-        next = get_next(next);
-    }
-    block->block_metadata &= ~(0xFFFFFFFFFFFFFFFULL);
-    block->block_metadata |= (newSize & 0xFFFFFFFFFFFFFFFULL);
-    return block;
+    // uint64_t newSize = get_size(block);
+    // memory_block_t *next = get_next(block);
+    // while (!is_allocated(next)) {
+    //     newSize += (16 + get_size(next));
+    //     next = get_next(next);
+    // }
+    // block->block_metadata &= ~(0xFFFFFFFFFFFFFFFULL);
+    // block->block_metadata |= (newSize & 0xFFFFFFFFFFFFFFFULL);
+    // return block;
+    return NULL;
 
 }
 
 
 // WROTE THIS TO GET FIRST FREE BLOCK THAT IS CONTIGUOSLY CONNECTED
 // THROUGH OTHER FREE BLOCKS TO 'block'
-memory_block_t *firstFreeBlock(memory_block_t *block) {
-    memory_block_t *cur = free_head;
-    memory_block_t *lastFreeblock = get_next(cur);
-    bool beforeBlock = false;
+// memory_block_t *firstFreeBlock(memory_block_t *block) {
+//     memory_block_t *cur = free_head;
+//     memory_block_t *lastFreeblock = get_next(cur);
+//     bool beforeBlock = false;
 
 
-    while (!beforeBlock) {
-        if (cur == block) {
-            return block;
-        }
-        else if (!is_allocated(cur)) {
-            bool contiguous = true;
-            while (contiguous) {
-                if (lastFreeblock == block) {
-                    return cur;
-                }
+//     while (!beforeBlock) {
+//         if (cur == block) {
+//             return block;
+//         }
+//         else if (!is_allocated(cur)) {
+//             bool contiguous = true;
+//             while (contiguous) {
+//                 if (lastFreeblock == block) {
+//                     return cur;
+//                 }
 
-                if (!is_allocated(lastFreeblock)) {
-                    lastFreeblock = get_next(lastFreeblock);
-                } else {
-                    cur = get_next(lastFreeblock);
-                    lastFreeblock = get_next(cur);
-                    contiguous = false;
-                }
-            }
-        }
-        else {
-            cur = get_next(cur);
-            lastFreeblock = get_next(cur);
-        }
-    }
+//                 if (!is_allocated(lastFreeblock)) {
+//                     lastFreeblock = get_next(lastFreeblock);
+//                 } else {
+//                     cur = get_next(lastFreeblock);
+//                     lastFreeblock = get_next(cur);
+//                     contiguous = false;
+//                 }
+//             }
+//         }
+//         else {
+//             cur = get_next(cur);
+//             lastFreeblock = get_next(cur);
+//         }
+//     }
     
-}
+//}
 
 
 
@@ -198,7 +222,31 @@ memory_block_t *firstFreeBlock(memory_block_t *block) {
  */
 int uinit() {
     //* STUDENT TODO
+    free_head = extend(PAGESIZE);
+    if (free_head == NULL) {
+        return -1;
+    }
     return 0;
+}
+
+memory_block_t *getPrevBlock(memory_block_t *block) {
+    if (block == free_head) {
+        return NULL;
+    }
+    memory_block_t *prev = free_head;
+    memory_block_t *cur = get_next(free_head); // free_head->next
+    bool found = false;
+    while (!found) {
+        if (cur == block) {
+            found = true;
+            return prev;
+        }
+        else {
+            prev = cur;
+            cur = get_next(cur);
+        }
+    }
+    return NULL;
 }
 
 /*
@@ -206,7 +254,24 @@ int uinit() {
  */
 void *umalloc(size_t size) {
     //* STUDENT TODO
-    return NULL;
+    memory_block_t *bestBlock = find(size);
+    if (bestBlock == NULL) {
+        bestBlock = extend(PAGESIZE);
+        memory_block_t *tail = free_head;
+        while (tail->next != NULL) {
+            tail = tail->next;
+        }
+        tail->next = bestBlock;
+    
+    }
+    if (get_size(bestBlock) != size) {
+        return split(bestBlock, size);
+    }
+    else {
+        allocate(bestBlock);
+        bestBlock->next = NULL;
+        return bestBlock;
+    }
 }
 
 /*
@@ -214,5 +279,43 @@ void *umalloc(size_t size) {
  * by a previous call to malloc.
  */
 void ufree(void *ptr) {
-    //* STUDENT TODO
+    memory_block_t *toBeFreed = get_block(ptr);
+    if (is_allocated(toBeFreed)) {
+        deallocate(toBeFreed);
+    }
+    else {
+        return;
+    }
+    
+
+    if (toBeFreed < free_head) {
+        toBeFreed->next = free_head;
+        free_head = toBeFreed;
+    }
+    else {
+        memory_block_t *cur = free_head;
+        memory_block_t *next = get_next(cur);
+
+        bool foundPrev = false;
+        while (!foundPrev) {
+            if (next == NULL) {
+                break;
+            }
+            if (cur < toBeFreed && toBeFreed < next) {
+                foundPrev = true;
+                toBeFreed->next = next;
+                cur->next = toBeFreed;
+            } 
+            else {
+                cur = next;
+                next = get_next(next);
+            }
+        }
+        if (!foundPrev) {
+            cur->next = toBeFreed;
+            toBeFreed->next = NULL;
+        }
+        
+    }
+    
 }

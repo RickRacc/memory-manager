@@ -23,45 +23,26 @@ extern memory_block_t *free_head;
  * return code. Asserts are also a useful tool here.
  */
 int check_heap() {
-    // Example heap check:
-    // Check that all blocks in the free list are marked free.
-    // If a block is marked allocated, return -1.
-    /*
-        memory_block_t *cur = free_head;
-        while (cur) {
-            if (is_allocated(cur)) {
-                return -1;
-            }
-        }
-    */
-
    memory_block_t *cur = free_head;
    memory_block_t *next = get_next(cur);
 
-   //alignment
-   if ((get_size(free_head) % 16) != 0) {
-    return -1;
-   }
-
-   //expected order
-   while (next != NULL) {
-    if (cur >= next) {
-        return -1;
-    }
-    
-    //check overlap
-    char *endCur = (char *)cur + get_size(cur);
-    char *startNext = (char *)next;
-    if (endCur >  startNext) {
-        return -1;
-    }
-
-
-
-    
-
-
-
+   while(next != NULL) {
+        //expected order
+        if (cur >= next) {
+            return -1;
+        }
+        //alignment
+        if ((unsigned long)cur % ALIGNMENT != 0) {
+            return -1;
+        }
+        //check overlap
+        char *endCur = (char *)(cur + 1) + get_size(cur) - 1;
+        char *startNext = (char *)next;
+        if (endCur >  startNext) {
+            return -1;
+        }
+        cur = next;
+        next = get_next(cur);
    }
     return 0;
 }
