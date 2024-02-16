@@ -63,7 +63,7 @@ memory_block_t *get_next(memory_block_t *block) {
  * field.
  */
 void put_block(memory_block_t *block, size_t size, bool alloc) {
-    printf("put_block size:%ld\n", size);
+    //printf("put_block size:%ld\n", size);
     assert(block != NULL);
     assert(size % ALIGNMENT == 0);
     assert(alloc >> 1 == 0);
@@ -83,7 +83,7 @@ void *get_payload(memory_block_t *block) {
  * get_block - given a payload, returns the block.
  */
 memory_block_t *get_block(void *payload) {
-    printf("in getBlock\n");
+    //printf("in getBlock\n");
 
     assert(payload != NULL);
     return ((memory_block_t *)payload) - 1;
@@ -99,15 +99,15 @@ memory_block_t *get_block(void *payload) {
  */
 memory_block_t *find(size_t size) {
 
-    printf("in find\n");
+    //printf("in find\n");
     //* STUDENT TODO
     memory_block_t *cur = free_head;
     //memory_block_t *bestBlock = cur;
     //bool found = false;
     while (cur != NULL) {
-        printf("cur:%p\n", cur);
+        //printf("cur:%p\n", cur);
         if (get_size(cur) >= size) {
-            printf("exiting while");
+            //printf("exiting while");
             return cur;
         }
         else {
@@ -133,7 +133,7 @@ memory_block_t *find(size_t size) {
  * extend - extends the heap if more memory is required.
  */
 memory_block_t *extend(size_t size) {
-    printf("in extend\n");
+    //printf("in extend\n");
 
     //* STUDENT TODO
     //4096
@@ -147,14 +147,14 @@ memory_block_t *extend(size_t size) {
  * split - splits a given block in parts, one allocated, one free.
  */
 memory_block_t *split(memory_block_t *block, size_t size) {
-    printf("in split\n");
+    //printf("in split\n");
 
     //* STUDENT TODO
-    printf("split size 1: %ld\n", size);
+    //printf("split size 1: %ld\n", size);
     // unsigned long mod = size % ALIGNMENT;
     // size += mod;
     size = ALIGN(size);
-    printf("split size 2: %ld\n", size);
+    //printf("split size 2: %ld\n", size);
     
 
     //keeping left portion of free block free    // B = H + s  + H + S
@@ -237,7 +237,7 @@ memory_block_t *coalesce(memory_block_t *block) {
  * along with allocating initial memory.
  */
 int uinit() {
-    printf("in uinit\n");
+    //printf("in uinit\n");
     //* STUDENT TODO
     free_head = extend(PAGESIZE);
     if (free_head == NULL) {
@@ -271,7 +271,7 @@ memory_block_t *getPrevBlock(memory_block_t *block) {
  */
 void *umalloc(size_t size) {
     //* STUDENT TODO
-    printf("in umalloc\n");
+    //printf("in umalloc\n");
 
     memory_block_t *bestBlock = find(size);
     if (bestBlock == NULL) {

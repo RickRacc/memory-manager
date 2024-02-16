@@ -29,6 +29,7 @@ def utilization_check(trace_file):
     if utilization.returncode != 0:
         return -1
     return_array = utilization.stdout.split('\n')
+    print(return_array)
     utilization_percentage = float(return_array[4].split()[3])
     return utilization_percentage
 
