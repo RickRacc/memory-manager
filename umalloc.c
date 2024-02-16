@@ -55,6 +55,7 @@ size_t get_size(memory_block_t *block) {
 memory_block_t *get_next(memory_block_t *block) {
     assert(block != NULL);
     return block->next;
+    
 }
 
 /*
