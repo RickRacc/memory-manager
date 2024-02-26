@@ -170,27 +170,73 @@ memory_block_t *split(memory_block_t *block, size_t size) {
     return allocatedBlock;
 }
 
+// goes through entire free list - NOT GIVEN
+void customCoalesce() {
+    memory_block_t *cur = free_head;
+    memory_block_t *next = get_next(free_head);
+
+    while (next != NULL) {
+        memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
+        if (nextAddress == next) {
+            cur->block_metadata = (get_size(cur) + ALIGNMENT + get_size(next)) | false;
+            cur->next = get_next(next);
+        } else {
+            cur = next;
+            next = get_next(next);
+        }
+    }
+    
+}
 /*
- * coalesce - coalesces a free memory block with neighbors.
+ * coalesce - coalesces a free memory block with neighbors. - GIVEN
  */
 memory_block_t *coalesce(memory_block_t *block) {
     //* STUDENT TODO
+    memory_block_t *cur = free_head;
+    memory_block_t *next = get_next(free_head);
+    memory_block_t *firstBlock = block;
+    size_t newSize = 0;
 
+    //neighbors before 'block'
+    while (cur < block) {
+        memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
+        if (nextAddress == next) {
+               if (firstBlock == block) {
+                    firstBlock = cur;
+                    newSize += get_size(cur);
+                } else {
+                    newSize += get_size(cur) + ALIGNMENT;
+                }
+        } else {
+            newSize = 0;
+            firstBlock = block;
+        }
+        cur = next;
+        next = get_next(cur);
+    }
 
-    // DID THIS AS FIRST STEP
-    // block = firstFreeBlock(block);
+    // count 'block'
+    if (firstBlock != block) {
+        newSize += get_size(block) + ALIGNMENT;
+    } else {
+        newSize += get_size(block);
+    }
     
-
-    // uint64_t newSize = get_size(block);
-    // memory_block_t *next = get_next(block);
-    // while (!is_allocated(next)) {
-    //     newSize += (16 + get_size(next));
-    //     next = get_next(next);
-    // }
-    // block->block_metadata &= ~(0xFFFFFFFFFFFFFFFULL);
-    // block->block_metadata |= (newSize & 0xFFFFFFFFFFFFFFFULL);
-    // return block;
-    return NULL;
+    // neighbors after 'block'
+    while (next != NULL) {
+        memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
+        if (nextAddress == next) {
+            newSize += get_size(next) + ALIGNMENT;
+            cur = next;
+            next = get_next(next);
+        } else {
+            break;
+        }
+    }
+    
+    firstBlock->next = next;
+    firstBlock->block_metadata = newSize | false;
+    return firstBlock;
 
 }
 
