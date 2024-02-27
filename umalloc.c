@@ -384,5 +384,7 @@ void ufree(void *ptr) {
         }
         
     }
+
+    coalesce(toBeFreed);
     
 }
