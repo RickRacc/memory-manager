@@ -349,6 +349,7 @@ memory_block_t *getPrevBlock(memory_block_t *block) {
 void *umalloc(size_t size) {
     //* STUDENT TODO
     //printf("in umalloc\n");
+    size = ALIGN(size);
 
     memory_block_t *bestBlock = find(size);
     if (bestBlock == NULL) {
@@ -377,12 +378,13 @@ void *umalloc(size_t size) {
  */
 void ufree(void *ptr) {
     memory_block_t *toBeFreed = get_block(ptr);
-    if (is_allocated(toBeFreed)) {
-        deallocate(toBeFreed);
-    }
-    else {
-        return;
-    }
+    deallocate(toBeFreed);
+    // if (is_allocated(toBeFreed)) {
+        
+    // }
+    // else {
+    //     return;
+    // }
     
 
     if (toBeFreed < free_head) {
