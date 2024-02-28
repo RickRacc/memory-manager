@@ -189,6 +189,22 @@ void customCoalesce() {
 }
 /*
  * coalesce - coalesces a free memory block with neighbors. - GIVEN
+
+
+ // have next 
+ // have cur,
+ // have starting block
+ // have size = 0;
+ // if next = 'block being freed',
+ // check if current is unallocated
+ //     if it is make it the 'starting block', and size = sizeOf(cur) + header and size of 'block being freed'
+ // if cur is allocated, then make the 'starting block' = 'block being freed', and size = size of 'block being freed'
+
+ // now check if the address of the next free block is right after 'block being freed'
+ // if it is then size += header and size of next free block
+
+ // now at the end make size of starting block = size
+ // and make next of starting block, the next of the last freed block
  */
 memory_block_t *coalesce(memory_block_t *block) {
     //* STUDENT TODO
@@ -196,47 +212,61 @@ memory_block_t *coalesce(memory_block_t *block) {
     memory_block_t *next = get_next(free_head);
     memory_block_t *firstBlock = block;
     size_t newSize = 0;
+    //bool leftSide = false;
 
     //neighbors before 'block'
     while (cur < block) {
-        memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
-        if (nextAddress == next) {
-               if (firstBlock == block) {
-                    firstBlock = cur;
-                    newSize += get_size(cur);
-                } else {
-                    newSize += get_size(cur) + ALIGNMENT;
-                }
-        } else {
-            newSize = 0;
-            firstBlock = block;
+        if (next == block) {
+            memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
+            if (nextAddress == block) {
+                firstBlock = cur;
+                newSize = get_size(cur);
+            }
+            break;
         }
         cur = next;
-        next = get_next(cur);
+        next = get_next(next);
     }
 
-    // count 'block'
+    //count 'block'
     if (firstBlock != block) {
         newSize += get_size(block) + ALIGNMENT;
     } else {
         newSize += get_size(block);
     }
-    
-    // neighbors after 'block'
-    while (next != NULL) {
-        memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
-        if (nextAddress == next) {
-            newSize += get_size(next) + ALIGNMENT;
-            cur = next;
-            next = get_next(next);
-        } else {
-            break;
-        }
+
+    next = get_next(block);
+    memory_block_t *nextAddress = (memory_block_t *)((char *)(block + 1) + get_size(block));
+    if (next == nextAddress) {
+        newSize += ALIGNMENT + get_size(next);
+        firstBlock->next = get_next(next);
+    } else {
+        firstBlock->next = next;
     }
-    
-    firstBlock->next = next;
+
     firstBlock->block_metadata = newSize | false;
     return firstBlock;
+
+
+
+    
+    
+    // // neighbors after 'block'
+    //
+    // while (next != NULL) {
+    //     memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
+    //     if (nextAddress == next) {
+    //         newSize += get_size(next) + ALIGNMENT;
+    //         cur = next;
+    //         next = get_next(next);
+    //     } else {
+    //         break;
+    //     }
+    // }
+    
+    // firstBlock->next = next;
+    // firstBlock->block_metadata = newSize | false;
+    // return firstBlock;
 
 }
 
