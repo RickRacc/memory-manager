@@ -151,18 +151,17 @@ memory_block_t *split(memory_block_t *block, size_t size) {
     //printf("in split\n");
 
     //* STUDENT TODO
-    //printf("split size 1: %ld\n", size);
-    // unsigned long mod = size % ALIGNMENT;
-    // size += mod;
-    size = ALIGN(size);
-    //printf("split size 2: %ld\n", size);
     
+    size = ALIGN(size);
+    int i = get_size(block) + ALIGNMENT;
 
     //keeping left portion of free block free    // B = H + s  + H + S
                                                 // s = B - H - H - S
                                                 // s = get_size - H - S
     unsigned long freeBlockSize = get_size(block) - size - ALIGNMENT; 
     block->block_metadata = freeBlockSize | false;
+    printf("Block size: %ld, freeBlockSize: %ld, fullBlockSize: %d  metadata: %ld \n",
+     size, freeBlockSize, i, block->block_metadata);
 
     char *allocatedAddress = (char *)(block + 1) + get_size(block);
     memory_block_t *allocatedBlock = (memory_block_t *)allocatedAddress;
@@ -183,6 +182,8 @@ void customCoalesce() {
         } else {
             cur = next;
             next = get_next(next);
+
+            
         }
     }
     
@@ -208,104 +209,100 @@ void customCoalesce() {
  */
 memory_block_t *coalesce(memory_block_t *block) {
     //* STUDENT TODO
-    memory_block_t *cur = free_head;
-    memory_block_t *next = get_next(free_head);
-    memory_block_t *firstBlock = block;
-    size_t newSize = 0;
-    //bool leftSide = false;
+    // memory_block_t *cur = free_head;
+    // memory_block_t *next = get_next(free_head);
+    // memory_block_t *firstBlock = block;
+    // size_t newSize = 0;
 
-    //neighbors before 'block'
-    while (cur < block) {
-        if (next == block) {
-            memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
-            if (nextAddress == block) {
-                firstBlock = cur;
-                newSize = get_size(cur);
-            }
-            break;
-        }
-        cur = next;
-        next = get_next(next);
-    }
-
-    //count 'block'
-    if (firstBlock != block) {
-        newSize += get_size(block) + ALIGNMENT;
-    } else {
-        newSize += get_size(block);
-    }
-
-    next = get_next(block);
-    memory_block_t *nextAddress = (memory_block_t *)((char *)(block + 1) + get_size(block));
-    if (next == nextAddress) {
-        newSize += ALIGNMENT + get_size(next);
-        firstBlock->next = get_next(next);
-    } else {
-        firstBlock->next = next;
-    }
-
-    firstBlock->block_metadata = newSize | false;
-    return firstBlock;
-
-
-
-    
-    
-    // // neighbors after 'block'
-    //
-    // while (next != NULL) {
-    //     memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
-    //     if (nextAddress == next) {
-    //         newSize += get_size(next) + ALIGNMENT;
-    //         cur = next;
-    //         next = get_next(next);
-    //     } else {
+    // //neighbors before 'block'
+    // while (cur < block) {
+    //     if (next == block) {
+    //         memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
+    //         if (nextAddress == block) {
+    //             firstBlock = cur;
+    //             newSize = get_size(cur);
+    //         }
     //         break;
     //     }
+    //     cur = next;
+    //     next = get_next(next);
     // }
-    
-    // firstBlock->next = next;
+
+    // //count 'block'
+    // if (firstBlock != block) {
+    //     newSize += get_size(block) + ALIGNMENT;
+    // } else {
+    //     newSize += get_size(block);
+    // }
+
+    // next = get_next(block);
+    // memory_block_t *nextAddress = (memory_block_t *)((char *)(block + 1) + get_size(block));
+    // if (next == nextAddress) {
+    //     newSize += ALIGNMENT + get_size(next);
+    //     firstBlock->next = get_next(next);
+    // } else {
+    //     firstBlock->next = next;
+    // }
+
     // firstBlock->block_metadata = newSize | false;
     // return firstBlock;
+    
+    //size_t newSize = 0;
+    memory_block_t* nextAdressOfBlock = (memory_block_t *)((char *)(block + 1) + get_size(block));
+    if (block < free_head) {
+        if (nextAdressOfBlock == free_head) {
+            block->next = free_head->next;
+            block->block_metadata += ALIGNMENT + get_size(free_head);
+        } else {
+            block->next = free_head;
+        }
+        free_head = block;
+    }
+    else {
+        memory_block_t *prevBlock = free_head;
+        memory_block_t *nextBlock = get_next(prevBlock);
 
+        bool foundPrev = false;
+        while (!foundPrev) {
+            if (nextBlock == NULL) {
+                break;
+            }
+            if (prevBlock < block && block < nextBlock) {
+                foundPrev = true;
+                memory_block_t *nextAddress = (memory_block_t *)((char *)(prevBlock + 1) + get_size(prevBlock));
+                if (nextAddress == block) {
+                    prevBlock->block_metadata += ALIGNMENT + get_size(block);
+                    block = prevBlock;
+                } else {
+                    prevBlock->next = block;
+                    block->next  = nextBlock;
+                }
+
+                if (nextAdressOfBlock == nextBlock) {
+                    block->next = nextBlock->next;
+                    block->block_metadata += ALIGNMENT + get_size(block);
+                } 
+            } 
+            else {
+                prevBlock = nextBlock;
+                nextBlock = get_next(nextBlock);
+            }
+        }
+        if (!foundPrev) {
+            memory_block_t *nextAddress = (memory_block_t *)((char *)(prevBlock + 1) + get_size(prevBlock));
+            if (nextAddress == block) {
+                prevBlock->block_metadata += ALIGNMENT + get_size(block);
+                block = prevBlock;
+            } else {
+                prevBlock->next = block;
+                block->next = NULL;
+            }
+            
+        }
+    }
+    return block;
 }
 
-
-// WROTE THIS TO GET FIRST FREE BLOCK THAT IS CONTIGUOSLY CONNECTED
-// THROUGH OTHER FREE BLOCKS TO 'block'
-// memory_block_t *firstFreeBlock(memory_block_t *block) {
-//     memory_block_t *cur = free_head;
-//     memory_block_t *lastFreeblock = get_next(cur);
-//     bool beforeBlock = false;
-
-
-//     while (!beforeBlock) {
-//         if (cur == block) {
-//             return block;
-//         }
-//         else if (!is_allocated(cur)) {
-//             bool contiguous = true;
-//             while (contiguous) {
-//                 if (lastFreeblock == block) {
-//                     return cur;
-//                 }
-
-//                 if (!is_allocated(lastFreeblock)) {
-//                     lastFreeblock = get_next(lastFreeblock);
-//                 } else {
-//                     cur = get_next(lastFreeblock);
-//                     lastFreeblock = get_next(cur);
-//                     contiguous = false;
-//                 }
-//             }
-//         }
-//         else {
-//             cur = get_next(cur);
-//             lastFreeblock = get_next(cur);
-//         }
-//     }
-    
-//}
 
 
 
@@ -350,10 +347,17 @@ void *umalloc(size_t size) {
     //* STUDENT TODO
     //printf("in umalloc\n");
     size = ALIGN(size);
-
+    // if (size > PAGESIZE) {
+    //     extend(size);
+    // }
+    // else {}
     memory_block_t *bestBlock = find(size);
     if (bestBlock == NULL) {
-        bestBlock = extend(PAGESIZE);
+        if (size > PAGESIZE) {
+            bestBlock = extend(size);
+        } else {
+            bestBlock = extend(PAGESIZE);
+        }
         memory_block_t *tail = free_head;
         while (tail->next != NULL) {
             tail = tail->next;
@@ -367,6 +371,19 @@ void *umalloc(size_t size) {
     }
     else {
         allocate(bestBlock);
+        printf("found exact match\n");
+        memory_block_t *prev = free_head;
+        memory_block_t *next = get_next(prev);
+        while(next != NULL) {
+            if (next == bestBlock) {
+                prev->next = bestBlock->next;
+                break;
+            }
+            prev = next;
+            next = get_next(next);
+        }
+
+        //bestblock.prev = bestblock.next
         bestBlock->next = NULL;
         return bestBlock;
     }
@@ -379,43 +396,36 @@ void *umalloc(size_t size) {
 void ufree(void *ptr) {
     memory_block_t *toBeFreed = get_block(ptr);
     deallocate(toBeFreed);
-    // if (is_allocated(toBeFreed)) {
-        
+    
+    // if (toBeFreed < free_head) {
+    //     toBeFreed->next = free_head;
+    //     free_head = toBeFreed;
     // }
     // else {
-    //     return;
-    // }
-    
+    //     memory_block_t *cur = free_head;
+    //     memory_block_t *next = get_next(cur);
 
-    if (toBeFreed < free_head) {
-        toBeFreed->next = free_head;
-        free_head = toBeFreed;
-    }
-    else {
-        memory_block_t *cur = free_head;
-        memory_block_t *next = get_next(cur);
-
-        bool foundPrev = false;
-        while (!foundPrev) {
-            if (next == NULL) {
-                break;
-            }
-            if (cur < toBeFreed && toBeFreed < next) {
-                foundPrev = true;
-                toBeFreed->next = next;
-                cur->next = toBeFreed;
-            } 
-            else {
-                cur = next;
-                next = get_next(next);
-            }
-        }
-        if (!foundPrev) {
-            cur->next = toBeFreed;
-            toBeFreed->next = NULL;
-        }
+    //     bool foundPrev = false;
+    //     while (!foundPrev) {
+    //         if (next == NULL) {
+    //             break;
+    //         }
+    //         if (cur < toBeFreed && toBeFreed < next) {
+    //             foundPrev = true;
+    //             toBeFreed->next = next;
+    //             cur->next = toBeFreed;
+    //         } 
+    //         else {
+    //             cur = next;
+    //             next = get_next(next);
+    //         }
+    //     }
+    //     if (!foundPrev) {
+    //         cur->next = toBeFreed;
+    //         toBeFreed->next = NULL;
+    //     }
         
-    }
+    //}
 
     coalesce(toBeFreed);
     
