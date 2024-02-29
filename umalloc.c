@@ -36,6 +36,7 @@ void allocate(memory_block_t *block) {
  */
 void deallocate(memory_block_t *block) {
     assert(block != NULL);
+    printf("Deallocate: %ld \n", block->block_metadata);
     block->block_metadata &= ~0x1;
 }
 
@@ -209,47 +210,16 @@ void customCoalesce() {
  */
 memory_block_t *coalesce(memory_block_t *block) {
     //* STUDENT TODO
-    // memory_block_t *cur = free_head;
-    // memory_block_t *next = get_next(free_head);
-    // memory_block_t *firstBlock = block;
-    // size_t newSize = 0;
+    printf("IN COALESCE \n");
+    if(free_head == NULL)  {
+        printf("free head is null\n");
+        return NULL;
+    }
 
-    // //neighbors before 'block'
-    // while (cur < block) {
-    //     if (next == block) {
-    //         memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
-    //         if (nextAddress == block) {
-    //             firstBlock = cur;
-    //             newSize = get_size(cur);
-    //         }
-    //         break;
-    //     }
-    //     cur = next;
-    //     next = get_next(next);
-    // }
 
-    // //count 'block'
-    // if (firstBlock != block) {
-    //     newSize += get_size(block) + ALIGNMENT;
-    // } else {
-    //     newSize += get_size(block);
-    // }
-
-    // next = get_next(block);
-    // memory_block_t *nextAddress = (memory_block_t *)((char *)(block + 1) + get_size(block));
-    // if (next == nextAddress) {
-    //     newSize += ALIGNMENT + get_size(next);
-    //     firstBlock->next = get_next(next);
-    // } else {
-    //     firstBlock->next = next;
-    // }
-
-    // firstBlock->block_metadata = newSize | false;
-    // return firstBlock;
-    
-    //size_t newSize = 0;
     memory_block_t* nextAdressOfBlock = (memory_block_t *)((char *)(block + 1) + get_size(block));
     if (block < free_head) {
+        printf("block < freeHead\n");
         if (nextAdressOfBlock == free_head) {
             block->next = free_head->next;
             block->block_metadata += ALIGNMENT + get_size(free_head);
@@ -268,6 +238,7 @@ memory_block_t *coalesce(memory_block_t *block) {
                 break;
             }
             if (prevBlock < block && block < nextBlock) {
+                printf("prevBlock < block < nextBlock\n");
                 foundPrev = true;
                 memory_block_t *nextAddress = (memory_block_t *)((char *)(prevBlock + 1) + get_size(prevBlock));
                 if (nextAddress == block) {
@@ -289,6 +260,7 @@ memory_block_t *coalesce(memory_block_t *block) {
             }
         }
         if (!foundPrev) {
+            printf("prevBlock < block, but next is null\n");
             memory_block_t *nextAddress = (memory_block_t *)((char *)(prevBlock + 1) + get_size(prevBlock));
             if (nextAddress == block) {
                 prevBlock->block_metadata += ALIGNMENT + get_size(block);
@@ -353,27 +325,43 @@ void *umalloc(size_t size) {
     // else {}
     memory_block_t *bestBlock = find(size);
     if (bestBlock == NULL) {
-        if (size > PAGESIZE) {
-            bestBlock = extend(size);
+        size_t sizeToAllocate = size + ALIGNMENT;
+        if (sizeToAllocate > PAGESIZE) {
+            bestBlock = extend(sizeToAllocate);
         } else {
             bestBlock = extend(PAGESIZE);
         }
-        memory_block_t *tail = free_head;
-        while (tail->next != NULL) {
-            tail = tail->next;
+
+
+        if (free_head == NULL) {
+            free_head = bestBlock;
         }
-        tail->next = bestBlock;
+        else {
+            memory_block_t *tail = free_head;
+            while (tail->next != NULL) {
+                tail = tail->next;
+            }
+            tail->next = bestBlock;
+        }
     
     }
     
     if (get_size(bestBlock) != size) {
+        //return get_payload(split(bestBlock, size));
         return split(bestBlock, size);
     }
     else {
-        allocate(bestBlock);
         printf("found exact match\n");
+        allocate(bestBlock);//
+        
+        if(bestBlock == free_head) {
+            free_head = NULL;
+            //return get_payload(bestBlock);
+            return bestBlock;
+        }
         memory_block_t *prev = free_head;
         memory_block_t *next = get_next(prev);
+
         while(next != NULL) {
             if (next == bestBlock) {
                 prev->next = bestBlock->next;
@@ -385,6 +373,7 @@ void *umalloc(size_t size) {
 
         //bestblock.prev = bestblock.next
         bestBlock->next = NULL;
+        //return get_payload(bestBlock);
         return bestBlock;
     }
 }
@@ -394,9 +383,16 @@ void *umalloc(size_t size) {
  * by a previous call to malloc.
  */
 void ufree(void *ptr) {
+    printf("IN FREE: ");
     memory_block_t *toBeFreed = get_block(ptr);
+    printf("%p\n", toBeFreed);
+
     deallocate(toBeFreed);
-    
+    printf("about to call coalesce\n");
+
+    coalesce(toBeFreed);
+
+
     // if (toBeFreed < free_head) {
     //     toBeFreed->next = free_head;
     //     free_head = toBeFreed;
@@ -427,6 +423,5 @@ void ufree(void *ptr) {
         
     //}
 
-    coalesce(toBeFreed);
     
 }
