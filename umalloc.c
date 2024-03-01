@@ -36,7 +36,7 @@ void allocate(memory_block_t *block) {
  */
 void deallocate(memory_block_t *block) {
     assert(block != NULL);
-    printf("Deallocate: %ld \n", block->block_metadata);
+    //printf("Deallocate: %ld \n", block->block_metadata);
     block->block_metadata &= ~0x1;
 }
 
@@ -65,7 +65,6 @@ memory_block_t *get_next(memory_block_t *block) {
  * field.
  */
 void put_block(memory_block_t *block, size_t size, bool alloc) {
-    //printf("put_block size:%ld\n", size);
     assert(block != NULL);
     assert(size % ALIGNMENT == 0);
     assert(alloc >> 1 == 0);
@@ -85,8 +84,6 @@ void *get_payload(memory_block_t *block) {
  * get_block - given a payload, returns the block.
  */
 memory_block_t *get_block(void *payload) {
-    //printf("in getBlock\n");
-
     assert(payload != NULL);
     return ((memory_block_t *)payload) - 1;
 }
@@ -100,34 +97,14 @@ memory_block_t *get_block(void *payload) {
  * find - finds a free block that can satisfy the umalloc request.
  */
 memory_block_t *find(size_t size) {
-
-    //printf("in find\n");
-    //* STUDENT TODO
     memory_block_t *cur = free_head;
-    //memory_block_t *bestBlock = cur;
-    //bool found = false;
+    // goes through free list and returns the first block with size
+    // greater than or equal to 'size', and NULL otherwise
     while (cur != NULL) {
-        //printf("cur:%p\n", cur);
         if (get_size(cur) >= size) {
-            //printf("exiting while");
             return cur;
-        }
-        else {
-            cur = get_next(cur);
-        }
-        // else if (get_size(cur) > size) {
-        //     found = true;
-        //     if ((size - get_size(cur)) <= (size - get_size(bestBlock))) {
-        //         bestBlock = cur;
-        //     }
-        // }
-        // else {
-        //     cur = get_next(cur);
-        // }
+        } else cur = get_next(cur);
     }
-    // if (found) {
-    //     return bestBlock;
-    // }
     return NULL;
 }
 
@@ -135,13 +112,9 @@ memory_block_t *find(size_t size) {
  * extend - extends the heap if more memory is required.
  */
 memory_block_t *extend(size_t size) {
-    //printf("in extend\n");
-
-    //* STUDENT TODO
-    //4096
-    // SHOULD I DO +16 HERE>>>MAKEW SURE YOU CAN!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // create a new free block of 'size'
     memory_block_t *rand = (memory_block_t *)csbrk(size);
-    put_block(rand, size, false);
+    put_block(rand, size - ALIGNMENT, false);
     return rand;
 }
 
@@ -149,98 +122,56 @@ memory_block_t *extend(size_t size) {
  * split - splits a given block in parts, one allocated, one free.
  */
 memory_block_t *split(memory_block_t *block, size_t size) {
-    //printf("in split\n");
-
-    //* STUDENT TODO
-    
-    size = ALIGN(size);
-    int i = get_size(block) + ALIGNMENT;
-
-    //keeping left portion of free block free    // B = H + s  + H + S
-                                                // s = B - H - H - S
-                                                // s = get_size - H - S
+    //make the 'left'/lower memory address side of the block the new free block    
+                                                                  // B = H + s  + H + S
+                                                                  // s = B - H - H - S
+                                                                  // s = get_size - H - S
     unsigned long freeBlockSize = get_size(block) - size - ALIGNMENT; 
     block->block_metadata = freeBlockSize | false;
-    printf("Block size: %ld, freeBlockSize: %ld, fullBlockSize: %d  metadata: %ld \n",
-     size, freeBlockSize, i, block->block_metadata);
-
+    
+    //make the 'right'/higher memory address side of the block the new allocated block 
     char *allocatedAddress = (char *)(block + 1) + get_size(block);
     memory_block_t *allocatedBlock = (memory_block_t *)allocatedAddress;
     put_block(allocatedBlock, size, true);
+
     return allocatedBlock;
 }
 
-// goes through entire free list - NOT GIVEN
-void customCoalesce() {
-    memory_block_t *cur = free_head;
-    memory_block_t *next = get_next(free_head);
 
-    while (next != NULL) {
-        memory_block_t  *nextAddress = (memory_block_t *)((char *)(cur + 1) + get_size(cur));
-        if (nextAddress == next) {
-            cur->block_metadata = (get_size(cur) + ALIGNMENT + get_size(next)) | false;
-            cur->next = get_next(next);
-        } else {
-            cur = next;
-            next = get_next(next);
-
-            
-        }
-    }
-    
-}
 /*
  * coalesce - coalesces a free memory block with neighbors. - GIVEN
-
-
- // have next 
- // have cur,
- // have starting block
- // have size = 0;
- // if next = 'block being freed',
- // check if current is unallocated
- //     if it is make it the 'starting block', and size = sizeOf(cur) + header and size of 'block being freed'
- // if cur is allocated, then make the 'starting block' = 'block being freed', and size = size of 'block being freed'
-
- // now check if the address of the next free block is right after 'block being freed'
- // if it is then size += header and size of next free block
-
- // now at the end make size of starting block = size
- // and make next of starting block, the next of the last freed block
  */
 memory_block_t *coalesce(memory_block_t *block) {
-    //* STUDENT TODO
-    printf("IN COALESCE \n");
+    //when the free list is empty
     if(free_head == NULL)  {
-        printf("free head is null\n");
-        return NULL;
+        free_head = block;
+        return free_head;
     }
-
-
-    memory_block_t* nextAdressOfBlock = (memory_block_t *)((char *)(block + 1) + get_size(block));
+    void* nextAdressOfBlock = (char *)(block + 1) + get_size(block);
+    //when 'block' has a lower memory address than the free_head 
     if (block < free_head) {
-        printf("block < freeHead\n");
+        //in case the blocks are right next to each other, merge them
         if (nextAdressOfBlock == free_head) {
             block->next = free_head->next;
             block->block_metadata += ALIGNMENT + get_size(free_head);
-        } else {
-            block->next = free_head;
-        }
+        } else block->next = free_head;
         free_head = block;
-    }
-    else {
+    } else {
+        // getting ready to traverse through free list
         memory_block_t *prevBlock = free_head;
         memory_block_t *nextBlock = get_next(prevBlock);
-
         bool foundPrev = false;
         while (!foundPrev) {
+            //this mean we have reached the end of the free list
             if (nextBlock == NULL) {
                 break;
             }
+            // in case 'block' is in between two free blocks
             if (prevBlock < block && block < nextBlock) {
-                printf("prevBlock < block < nextBlock\n");
                 foundPrev = true;
-                memory_block_t *nextAddress = (memory_block_t *)((char *)(prevBlock + 1) + get_size(prevBlock));
+                void* nextAddress = (char *)(prevBlock + 1) + get_size(prevBlock);
+                //check if the lower memory address free block and 'block' are
+                //right next to each other, if so merge them
                 if (nextAddress == block) {
                     prevBlock->block_metadata += ALIGNMENT + get_size(block);
                     block = prevBlock;
@@ -248,43 +179,39 @@ memory_block_t *coalesce(memory_block_t *block) {
                     prevBlock->next = block;
                     block->next  = nextBlock;
                 }
-
+                // check if 'block' and the higher addressed free block are right next to each other
+                // if so merge them
                 if (nextAdressOfBlock == nextBlock) {
                     block->next = nextBlock->next;
-                    block->block_metadata += ALIGNMENT + get_size(block);
+                    block->block_metadata += ALIGNMENT + get_size(nextBlock);
                 } 
-            } 
-            else {
+            } else {
                 prevBlock = nextBlock;
                 nextBlock = get_next(nextBlock);
             }
         }
+        // in case 'block' occurs after the free list
         if (!foundPrev) {
-            printf("prevBlock < block, but next is null\n");
-            memory_block_t *nextAddress = (memory_block_t *)((char *)(prevBlock + 1) + get_size(prevBlock));
+            void* nextAddress = (char *)(prevBlock + 1) + get_size(prevBlock);
+            // if the block at the end of the free list, and 'block' are
+            // right next to each other, merge them
             if (nextAddress == block) {
                 prevBlock->block_metadata += ALIGNMENT + get_size(block);
                 block = prevBlock;
             } else {
                 prevBlock->next = block;
                 block->next = NULL;
-            }
-            
+            } 
         }
     }
     return block;
 }
-
-
-
 
 /*
  * uinit - Used initialize metadata required to manage the heap
  * along with allocating initial memory.
  */
 int uinit() {
-    //printf("in uinit\n");
-    //* STUDENT TODO
     free_head = extend(PAGESIZE);
     if (free_head == NULL) {
         return -1;
@@ -292,50 +219,25 @@ int uinit() {
     return 0;
 }
 
-memory_block_t *getPrevBlock(memory_block_t *block) {
-    if (block == free_head) {
-        return NULL;
-    }
-    memory_block_t *prev = free_head;
-    memory_block_t *cur = get_next(free_head); // free_head->next
-    bool found = false;
-    while (!found) {
-        if (cur == block) {
-            found = true;
-            return prev;
-        }
-        else {
-            prev = cur;
-            cur = get_next(cur);
-        }
-    }
-    return NULL;
-}
-
 /*
  * umalloc -  allocates size bytes and returns a pointer to the allocated memory.
  */
 void *umalloc(size_t size) {
-    //* STUDENT TODO
-    //printf("in umalloc\n");
     size = ALIGN(size);
-    // if (size > PAGESIZE) {
-    //     extend(size);
-    // }
-    // else {}
+    // get the first fit block for 'size'
     memory_block_t *bestBlock = find(size);
+    // if that block does not exist, extend the free list accordingly
     if (bestBlock == NULL) {
         size_t sizeToAllocate = size + ALIGNMENT;
         if (sizeToAllocate > PAGESIZE) {
             bestBlock = extend(sizeToAllocate);
-        } else {
-            bestBlock = extend(PAGESIZE);
-        }
-
-
+        } else bestBlock = extend(PAGESIZE);
+        //if the free list is empty, set the free_head to the newly aquired
+        //memory blocks in 'bestBlock'
         if (free_head == NULL) {
             free_head = bestBlock;
         }
+        //otherwise add the newly aquired block to the end of the free list
         else {
             memory_block_t *tail = free_head;
             while (tail->next != NULL) {
@@ -343,25 +245,23 @@ void *umalloc(size_t size) {
             }
             tail->next = bestBlock;
         }
-    
     }
     
+    // split the 'bestBlock' into a free block and an allocated block
+    // of 'size' if it's not a perfect fit, 
     if (get_size(bestBlock) != size) {
-        //return get_payload(split(bestBlock, size));
-        return split(bestBlock, size);
-    }
-    else {
-        printf("found exact match\n");
-        allocate(bestBlock);//
-        
+        return get_payload(split(bestBlock, size));
+    } else {
+        allocate(bestBlock);
+        // in case the free list is empty, simply return bestBlock
         if(bestBlock == free_head) {
             free_head = NULL;
-            //return get_payload(bestBlock);
-            return bestBlock;
+            return get_payload(bestBlock);
         }
+
         memory_block_t *prev = free_head;
         memory_block_t *next = get_next(prev);
-
+        // if free list is not empty, remove bestBlock from the free list
         while(next != NULL) {
             if (next == bestBlock) {
                 prev->next = bestBlock->next;
@@ -371,10 +271,8 @@ void *umalloc(size_t size) {
             next = get_next(next);
         }
 
-        //bestblock.prev = bestblock.next
         bestBlock->next = NULL;
-        //return get_payload(bestBlock);
-        return bestBlock;
+        return get_payload(bestBlock);
     }
 }
 
@@ -383,45 +281,8 @@ void *umalloc(size_t size) {
  * by a previous call to malloc.
  */
 void ufree(void *ptr) {
-    printf("IN FREE: ");
     memory_block_t *toBeFreed = get_block(ptr);
-    printf("%p\n", toBeFreed);
-
     deallocate(toBeFreed);
-    printf("about to call coalesce\n");
-
     coalesce(toBeFreed);
-
-
-    // if (toBeFreed < free_head) {
-    //     toBeFreed->next = free_head;
-    //     free_head = toBeFreed;
-    // }
-    // else {
-    //     memory_block_t *cur = free_head;
-    //     memory_block_t *next = get_next(cur);
-
-    //     bool foundPrev = false;
-    //     while (!foundPrev) {
-    //         if (next == NULL) {
-    //             break;
-    //         }
-    //         if (cur < toBeFreed && toBeFreed < next) {
-    //             foundPrev = true;
-    //             toBeFreed->next = next;
-    //             cur->next = toBeFreed;
-    //         } 
-    //         else {
-    //             cur = next;
-    //             next = get_next(next);
-    //         }
-    //     }
-    //     if (!foundPrev) {
-    //         cur->next = toBeFreed;
-    //         toBeFreed->next = NULL;
-    //     }
-        
-    //}
-
     
 }
