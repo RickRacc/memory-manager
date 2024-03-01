@@ -36,7 +36,6 @@ void allocate(memory_block_t *block) {
  */
 void deallocate(memory_block_t *block) {
     assert(block != NULL);
-    //printf("Deallocate: %ld \n", block->block_metadata);
     block->block_metadata &= ~0x1;
 }
 
@@ -46,8 +45,6 @@ void deallocate(memory_block_t *block) {
 size_t get_size(memory_block_t *block) {
     assert(block != NULL);
     return block->block_metadata & ~(ALIGNMENT-1);
-
-    
 }
 
 /*
@@ -284,5 +281,4 @@ void ufree(void *ptr) {
     memory_block_t *toBeFreed = get_block(ptr);
     deallocate(toBeFreed);
     coalesce(toBeFreed);
-    
 }

@@ -35,5 +35,23 @@
         "utility": "c",
         "variant": "c",
         "core": "c"
-    }
+    }, 
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/u/rrrakesh/mm-lab-RickRacc",
+            "binaryPath": "/u/rrrakesh/mm-lab-RickRacc/runner",
+            "binaryArgs": [
+                "-rv", "./traces/coalescing.rep"
+            ]
+        },
+        {
+            "cwd": "/u/rrrakesh/mm-lab-RickRacc",
+            "binaryPath": "/u/rrrakesh/mm-lab-RickRacc/runner",
+            "binaryArgs": [
+                "-rv", "./traces/amptjp.rep"
+            ]
+        }
+    ],
+    "terminal.integrated.scrollback": 50000
+
 }
